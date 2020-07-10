@@ -5,6 +5,7 @@
     <transfer name="RestCompanyBusinessUnitOrderList">
         <property name="idCustomer" type="string"/>
         <property name="companyBusinessUnitUuid" type="string"/>
+        <property name="orderReference" type="string"/>
         <property name="filter" type="Filter"/>
     </transfer>
 

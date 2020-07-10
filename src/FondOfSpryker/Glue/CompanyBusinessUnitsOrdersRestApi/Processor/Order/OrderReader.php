@@ -45,13 +45,43 @@ class OrderReader implements OrderReaderInterface
             return $this->orderRestResponseBuilder->createCompanyBusinessUnitIdentifierMissingErrorResponse();
         }
 
-        $restCompanyBusinessUnitOrderListTransfer = $this->createRestCompanyBusinessUnitOrderListTransfer($restRequest);
+        $restCompanyBusinessUnitOrderListTransfer = $this->createRestCompanyBusinessUnitOrderListTransfer($restRequest)
+            ->setFilter($this->createFilterTransfer($restRequest));
 
         $companyBusinessUnitOrderListTransfer = $this->client->findOrders($restCompanyBusinessUnitOrderListTransfer);
 
         return $this->orderRestResponseBuilder->createOrderListRestResponse(
             $restCompanyBusinessUnitOrderListTransfer,
             $companyBusinessUnitOrderListTransfer
+        );
+    }
+
+    /**
+     * @param string $orderReference
+     * @param \Spryker\Glue\GlueApplication\Rest\Request\Data\RestRequestInterface|string $restRequest
+     *
+     * @return \Spryker\Glue\GlueApplication\Rest\JsonApi\RestResponseInterface
+     */
+    public function getOrder(string $orderReference, RestRequestInterface $restRequest): RestResponseInterface
+    {
+        if ($this->findCompanyBusinessUnitIdentifier($restRequest) === null) {
+            return $this->orderRestResponseBuilder->createCompanyBusinessUnitIdentifierMissingErrorResponse();
+        }
+
+        $restCompanyBusinessUnitOrderListTransfer = $this->createRestCompanyBusinessUnitOrderListTransfer($restRequest);
+        $restCompanyBusinessUnitOrderListTransfer->setOrderReference($orderReference);
+
+        $companyBusinessUnitOrderListTransfer = $this->client->findOrders($restCompanyBusinessUnitOrderListTransfer);
+
+        $orderTransfers = $companyBusinessUnitOrderListTransfer->getOrders();
+
+        if ($orderTransfers->count() !== 1) {
+            return $this->orderRestResponseBuilder->createOrderNotFoundErrorResponse();
+        }
+
+        return $this->orderRestResponseBuilder->createOrderRestResponse(
+            $restCompanyBusinessUnitOrderListTransfer,
+            $orderTransfers->offsetGet(0)
         );
     }
 
@@ -65,8 +95,7 @@ class OrderReader implements OrderReaderInterface
     ): RestCompanyBusinessUnitOrderListTransfer {
         return (new RestCompanyBusinessUnitOrderListTransfer())
             ->setIdCustomer($restRequest->getRestUser()->getSurrogateIdentifier())
-            ->setCompanyBusinessUnitUuid($this->findCompanyBusinessUnitIdentifier($restRequest))
-            ->setFilter($this->createFilterTransfer($restRequest));
+            ->setCompanyBusinessUnitUuid($this->findCompanyBusinessUnitIdentifier($restRequest));
     }
 
     /**

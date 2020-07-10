@@ -5,9 +5,12 @@ namespace FondOfSpryker\Glue\CompanyBusinessUnitsOrdersRestApi\Processor\RestRes
 use FondOfSpryker\Glue\CompanyBusinessUnitsOrdersRestApi\CompanyBusinessUnitsOrdersRestApiConfig;
 use FondOfSpryker\Glue\CompanyBusinessUnitsOrdersRestApi\Processor\Mapper\OrderMapperInterface;
 use Generated\Shared\Transfer\CompanyBusinessUnitOrderListTransfer;
+use Generated\Shared\Transfer\OrderTransfer;
 use Generated\Shared\Transfer\RestCompanyBusinessUnitOrderListTransfer;
 use Generated\Shared\Transfer\RestErrorMessageTransfer;
+use Spryker\Glue\GlueApplication\Rest\JsonApi\RestLinkInterface;
 use Spryker\Glue\GlueApplication\Rest\JsonApi\RestResourceBuilderInterface;
+use Spryker\Glue\GlueApplication\Rest\JsonApi\RestResourceInterface;
 use Spryker\Glue\GlueApplication\Rest\JsonApi\RestResponseInterface;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -37,6 +40,66 @@ class OrderRestResponseBuilder implements OrderRestResponseBuilderInterface
 
     /**
      * @param \Generated\Shared\Transfer\RestCompanyBusinessUnitOrderListTransfer $restCompanyBusinessUnitOrderListTransfer
+     * @param \Generated\Shared\Transfer\OrderTransfer $orderTransfer
+     *
+     * @return \Spryker\Glue\GlueApplication\Rest\JsonApi\RestResourceInterface
+     */
+    public function createOrderRestResource(
+        RestCompanyBusinessUnitOrderListTransfer $restCompanyBusinessUnitOrderListTransfer,
+        OrderTransfer $orderTransfer
+    ): RestResourceInterface {
+        $restOrderDetailsAttributesTransfer = $this->orderResourceMapper
+            ->mapOrderTransferToRestOrderDetailsAttributesTransfer($orderTransfer);
+
+        $orderRestResource = $this->restResourceBuilder->createRestResource(
+            CompanyBusinessUnitsOrdersRestApiConfig::RESOURCE_COMPANY_BUSINESS_UNIT_ORDERS,
+            $orderTransfer->getOrderReference(),
+            $restOrderDetailsAttributesTransfer
+        );
+
+        return $this->addSelfLinkToOrderRestResource($orderRestResource, $restCompanyBusinessUnitOrderListTransfer);
+    }
+
+    /**
+     * @param \Spryker\Glue\GlueApplication\Rest\JsonApi\RestResourceInterface $orderRestResource
+     * @param \Generated\Shared\Transfer\RestCompanyBusinessUnitOrderListTransfer $restCompanyBusinessUnitOrderListTransfer
+     *
+     * @return \Spryker\Glue\GlueApplication\Rest\JsonApi\RestResourceInterface
+     */
+    protected function addSelfLinkToOrderRestResource(
+        RestResourceInterface $orderRestResource,
+        RestCompanyBusinessUnitOrderListTransfer $restCompanyBusinessUnitOrderListTransfer
+    ): RestResourceInterface {
+        return $orderRestResource->addLink(
+            RestLinkInterface::LINK_SELF,
+            sprintf(
+                '%s/%s/%s/%s',
+                CompanyBusinessUnitsOrdersRestApiConfig::PARENT_RESOURCE_COMPANY_BUSINESS_UNITS,
+                $restCompanyBusinessUnitOrderListTransfer->getCompanyBusinessUnitUuid(),
+                CompanyBusinessUnitsOrdersRestApiConfig::RESOURCE_COMPANY_BUSINESS_UNIT_ORDERS,
+                $orderRestResource->getId()
+            )
+        );
+    }
+
+    /**
+     * @param \Generated\Shared\Transfer\RestCompanyBusinessUnitOrderListTransfer $restCompanyBusinessUnitOrderListTransfer
+     * @param \Generated\Shared\Transfer\OrderTransfer $orderTransfer
+     *
+     * @return \Spryker\Glue\GlueApplication\Rest\JsonApi\RestResponseInterface
+     */
+    public function createOrderRestResponse(
+        RestCompanyBusinessUnitOrderListTransfer $restCompanyBusinessUnitOrderListTransfer,
+        OrderTransfer $orderTransfer
+    ): RestResponseInterface {
+        $orderRestResource = $this->createOrderRestResource($restCompanyBusinessUnitOrderListTransfer, $orderTransfer);
+
+        return $this->restResourceBuilder->createRestResponse()
+            ->addResource($orderRestResource);
+    }
+
+    /**
+     * @param \Generated\Shared\Transfer\RestCompanyBusinessUnitOrderListTransfer $restCompanyBusinessUnitOrderListTransfer
      * @param \Generated\Shared\Transfer\CompanyBusinessUnitOrderListTransfer $companyBusinessUnitOrderListTransfer
      *
      * @return \Spryker\Glue\GlueApplication\Rest\JsonApi\RestResponseInterface
@@ -54,16 +117,12 @@ class OrderRestResponseBuilder implements OrderRestResponseBuilderInterface
         $restResponse = $this->restResourceBuilder->createRestResponse($totalItems, $limit);
 
         foreach ($companyBusinessUnitOrderListTransfer->getOrders() as $orderTransfer) {
-            $restOrdersAttributesTransfer = $this->orderResourceMapper
-                ->mapOrderTransferToRestOrderDetailsAttributesTransfer($orderTransfer);
-
-            $restResponse = $restResponse->addResource(
-                $this->restResourceBuilder->createRestResource(
-                    CompanyBusinessUnitsOrdersRestApiConfig::RESOURCE_COMPANY_BUSINESS_UNIT_ORDERS,
-                    $orderTransfer->getOrderReference(),
-                    $restOrdersAttributesTransfer
-                )
+            $orderRestResource = $this->createOrderRestResource(
+                $restCompanyBusinessUnitOrderListTransfer,
+                $orderTransfer
             );
+
+            $restResponse = $restResponse->addResource($orderRestResource);
         }
 
         return $restResponse;
@@ -82,5 +141,18 @@ class OrderRestResponseBuilder implements OrderRestResponseBuilderInterface
         return $this->restResourceBuilder
             ->createRestResponse()
             ->addError($restErrorMessageTransfer);
+    }
+
+    /**
+     * @return \Spryker\Glue\GlueApplication\Rest\JsonApi\RestResponseInterface
+     */
+    public function createOrderNotFoundErrorResponse(): RestResponseInterface
+    {
+        $restErrorTransfer = (new RestErrorMessageTransfer())
+            ->setCode(CompanyBusinessUnitsOrdersRestApiConfig::RESPONSE_CODE_CANT_FIND_ORDER)
+            ->setStatus(Response::HTTP_NOT_FOUND)
+            ->setDetail(CompanyBusinessUnitsOrdersRestApiConfig::EXCEPTION_MESSAGE_CANT_FIND_ORDER);
+
+        return $this->restResourceBuilder->createRestResponse()->addError($restErrorTransfer);
     }
 }
