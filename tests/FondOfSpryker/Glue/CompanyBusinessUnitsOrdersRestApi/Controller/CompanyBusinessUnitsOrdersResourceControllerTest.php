@@ -5,6 +5,7 @@ namespace FondOfSpryker\Glue\CompanyBusinessUnitsOrdersRestApi\Controller;
 use Codeception\Test\Unit;
 use FondOfSpryker\Glue\CompanyBusinessUnitsOrdersRestApi\CompanyBusinessUnitsOrdersRestApiFactory;
 use FondOfSpryker\Glue\CompanyBusinessUnitsOrdersRestApi\Processor\Order\OrderReaderInterface;
+use Spryker\Glue\GlueApplication\Rest\JsonApi\RestResourceInterface;
 use Spryker\Glue\GlueApplication\Rest\JsonApi\RestResponseInterface;
 use Spryker\Glue\GlueApplication\Rest\Request\Data\RestRequestInterface;
 use Spryker\Glue\Kernel\AbstractFactory;
@@ -25,6 +26,11 @@ class CompanyBusinessUnitsOrdersResourceControllerTest extends Unit
      * @var \PHPUnit\Framework\MockObject\MockObject|\Spryker\Glue\GlueApplication\Rest\Request\Data\RestRequestInterface
      */
     protected $restRequestMock;
+
+    /**
+     * @var \PHPUnit\Framework\MockObject\MockObject|\Spryker\Glue\GlueApplication\Rest\JsonApi\RestResourceInterface
+     */
+    protected $restResourceMock;
 
     /**
      * @var \PHPUnit\Framework\MockObject\MockObject|\Spryker\Glue\GlueApplication\Rest\JsonApi\RestResponseInterface
@@ -52,6 +58,10 @@ class CompanyBusinessUnitsOrdersResourceControllerTest extends Unit
             ->getMock();
 
         $this->restRequestMock = $this->getMockBuilder(RestRequestInterface::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+
+        $this->restResourceMock = $this->getMockBuilder(RestResourceInterface::class)
             ->disableOriginalConstructor()
             ->getMock();
 
@@ -88,8 +98,45 @@ class CompanyBusinessUnitsOrdersResourceControllerTest extends Unit
     /**
      * @return void
      */
+    public function testGetActionForSingleResource(): void
+    {
+        $orderReference = 'DE-1';
+
+        $this->restRequestMock->expects($this->atLeastOnce())
+            ->method('getResource')
+            ->willReturn($this->restResourceMock);
+
+        $this->restResourceMock->expects($this->atLeastOnce())
+            ->method('getId')
+            ->willReturn($orderReference);
+
+        $this->companyBusinessUnitsOrdersRestApiFactory->expects($this->atLeastOnce())
+            ->method('createOrderReader')
+            ->willReturn($this->orderReaderMock);
+
+        $this->orderReaderMock->expects($this->atLeastOnce())
+            ->method('getOrder')
+            ->with($orderReference, $this->restRequestMock)
+            ->willReturn($this->restResponseMock);
+
+        $restResponse = $this->companyBusinessUnitsOrdersResourceController->getAction($this->restRequestMock);
+
+        $this->assertEquals($this->restResponseMock, $restResponse);
+    }
+
+    /**
+     * @return void
+     */
     public function testGetAction(): void
     {
+        $this->restRequestMock->expects($this->atLeastOnce())
+            ->method('getResource')
+            ->willReturn($this->restResourceMock);
+
+        $this->restResourceMock->expects($this->atLeastOnce())
+            ->method('getId')
+            ->willReturn(null);
+
         $this->companyBusinessUnitsOrdersRestApiFactory->expects($this->atLeastOnce())
             ->method('createOrderReader')
             ->willReturn($this->orderReaderMock);

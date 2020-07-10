@@ -2,11 +2,13 @@
 
 namespace FondOfSpryker\Glue\CompanyBusinessUnitsOrdersRestApi\Processor\Order;
 
+use ArrayObject;
 use Codeception\Test\Unit;
 use FondOfSpryker\Client\CompanyBusinessUnitsOrdersRestApi\CompanyBusinessUnitsOrdersRestApiClientInterface;
 use FondOfSpryker\Glue\CompanyBusinessUnitsOrdersRestApi\CompanyBusinessUnitsOrdersRestApiConfig;
 use FondOfSpryker\Glue\CompanyBusinessUnitsOrdersRestApi\Processor\RestResponseBuilder\OrderRestResponseBuilderInterface;
 use Generated\Shared\Transfer\CompanyBusinessUnitOrderListTransfer;
+use Generated\Shared\Transfer\OrderTransfer;
 use Generated\Shared\Transfer\RestCompanyBusinessUnitOrderListTransfer;
 use Generated\Shared\Transfer\RestUserTransfer;
 use Spryker\Glue\GlueApplication\Rest\JsonApi\RestResourceInterface;
@@ -52,6 +54,11 @@ class OrderReaderTest extends Unit
     protected $idCustomer;
 
     /**
+     * @var int
+     */
+    protected $orderReference;
+
+    /**
      * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $restUserTransferMock;
@@ -65,6 +72,11 @@ class OrderReaderTest extends Unit
      * @var \PHPUnit\Framework\MockObject\MockObject|\Generated\Shared\Transfer\CompanyBusinessUnitOrderListTransfer
      */
     protected $companyBusinessUnitOrderListTransferMock;
+
+    /**
+     * @var \PHPUnit\Framework\MockObject\MockObject|\Generated\Shared\Transfer\OrderTransfer
+     */
+    protected $orderTransferMock;
 
     /**
      * @var \FondOfSpryker\Glue\CompanyBusinessUnitsOrdersRestApi\Processor\Order\OrderReaderInterface
@@ -110,8 +122,13 @@ class OrderReaderTest extends Unit
             ->disableOriginalConstructor()
             ->getMock();
 
+        $this->orderTransferMock = $this->getMockBuilder(OrderTransfer::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+
         $this->companyBusinessUnitUuid = '0fc338f9-9ffa-4276-93da-37d21ffcecb7';
         $this->idCustomer = 1;
+        $this->orderReference = 'DE-1';
 
         $this->orderReader = new OrderReader(
             $this->clientMock,
@@ -164,6 +181,7 @@ class OrderReaderTest extends Unit
                     static function (RestCompanyBusinessUnitOrderListTransfer $restCompanyBusinessUnitOrderListTransfer) use ($self) {
                         return $restCompanyBusinessUnitOrderListTransfer->getIdCustomer() === $self->idCustomer
                             && $restCompanyBusinessUnitOrderListTransfer->getCompanyBusinessUnitUuid() === $self->companyBusinessUnitUuid
+                            && $restCompanyBusinessUnitOrderListTransfer->getOrderReference() === null
                             && $restCompanyBusinessUnitOrderListTransfer->getFilter() !== null;
                     }
                 )
@@ -213,6 +231,7 @@ class OrderReaderTest extends Unit
                     static function (RestCompanyBusinessUnitOrderListTransfer $restCompanyBusinessUnitOrderListTransfer) use ($self) {
                         return $restCompanyBusinessUnitOrderListTransfer->getIdCustomer() === $self->idCustomer
                             && $restCompanyBusinessUnitOrderListTransfer->getCompanyBusinessUnitUuid() === $self->companyBusinessUnitUuid
+                            && $restCompanyBusinessUnitOrderListTransfer->getOrderReference() === null
                             && $restCompanyBusinessUnitOrderListTransfer->getFilter() === null;
                     }
                 )
@@ -248,7 +267,6 @@ class OrderReaderTest extends Unit
         $this->restRequestMock->expects($this->never())
             ->method('getPage');
 
-        $self = $this;
         $this->clientMock->expects($this->never())
             ->method('findOrders');
 
@@ -256,5 +274,143 @@ class OrderReaderTest extends Unit
             ->method('createOrderListRestResponse');
 
         $this->assertEquals($this->restResponseMock, $this->orderReader->findOrders($this->restRequestMock));
+    }
+
+    /**
+     * @return void
+     */
+    public function testGetOrderWithoutParentResource(): void
+    {
+        $this->restRequestMock->expects($this->atLeastOnce())
+            ->method('findParentResourceByType')
+            ->with(CompanyBusinessUnitsOrdersRestApiConfig::PARENT_RESOURCE_COMPANY_BUSINESS_UNITS)
+            ->willReturn(null);
+
+        $this->restResourceMock->expects($this->never())
+            ->method('getId');
+
+        $this->orderRestResponseBuilderMock->expects($this->atLeastOnce())
+            ->method('createCompanyBusinessUnitIdentifierMissingErrorResponse')
+            ->willReturn($this->restResponseMock);
+
+        $this->restRequestMock->expects($this->never())
+            ->method('getRestUser');
+
+        $this->clientMock->expects($this->never())
+            ->method('findOrders');
+
+        $this->orderRestResponseBuilderMock->expects($this->never())
+            ->method('createOrderRestResponse');
+
+        $this->assertEquals($this->restResponseMock, $this->orderReader->getOrder(
+            $this->orderReference,
+            $this->restRequestMock
+        ));
+    }
+
+    /**
+     * @return void
+     */
+    public function testGetOrder(): void
+    {
+        $this->restRequestMock->expects($this->atLeastOnce())
+            ->method('findParentResourceByType')
+            ->with(CompanyBusinessUnitsOrdersRestApiConfig::PARENT_RESOURCE_COMPANY_BUSINESS_UNITS)
+            ->willReturn($this->restResourceMock);
+
+        $this->restResourceMock->expects($this->atLeastOnce())
+            ->method('getId')
+            ->willReturn($this->companyBusinessUnitUuid);
+
+        $this->orderRestResponseBuilderMock->expects($this->never())
+            ->method('createCompanyBusinessUnitIdentifierMissingErrorResponse');
+
+        $this->restRequestMock->expects($this->atLeastOnce())
+            ->method('getRestUser')
+            ->willReturn($this->restUserTransferMock);
+
+        $this->restUserTransferMock->expects($this->atLeastOnce())
+            ->method('getSurrogateIdentifier')
+            ->willReturn($this->idCustomer);
+
+        $self = $this;
+        $callback = static function (RestCompanyBusinessUnitOrderListTransfer $restCompanyBusinessUnitOrderListTransfer) use ($self) {
+            return $restCompanyBusinessUnitOrderListTransfer->getIdCustomer() === $self->idCustomer
+                && $restCompanyBusinessUnitOrderListTransfer->getCompanyBusinessUnitUuid() === $self->companyBusinessUnitUuid
+                && $restCompanyBusinessUnitOrderListTransfer->getOrderReference() === $self->orderReference
+                && $restCompanyBusinessUnitOrderListTransfer->getFilter() === null;
+        };
+
+        $this->clientMock->expects($this->atLeastOnce())
+            ->method('findOrders')
+            ->with($this->callback($callback))
+            ->willReturn($this->companyBusinessUnitOrderListTransferMock);
+
+        $this->companyBusinessUnitOrderListTransferMock->expects($this->atLeastOnce())
+            ->method('getOrders')
+            ->willReturn(new ArrayObject([$this->orderTransferMock]));
+
+        $this->orderRestResponseBuilderMock->expects($this->atLeastOnce())
+            ->method('createOrderRestResponse')
+            ->with($this->callback($callback), $this->orderTransferMock)
+            ->willReturn($this->restResponseMock);
+
+        $this->assertEquals($this->restResponseMock, $this->orderReader->getOrder(
+            $this->orderReference,
+            $this->restRequestMock
+        ));
+    }
+
+    /**
+     * @return void
+     */
+    public function testGetOrderWithInvalidOrderReference(): void
+    {
+        $this->restRequestMock->expects($this->atLeastOnce())
+            ->method('findParentResourceByType')
+            ->with(CompanyBusinessUnitsOrdersRestApiConfig::PARENT_RESOURCE_COMPANY_BUSINESS_UNITS)
+            ->willReturn($this->restResourceMock);
+
+        $this->restResourceMock->expects($this->atLeastOnce())
+            ->method('getId')
+            ->willReturn($this->companyBusinessUnitUuid);
+
+        $this->orderRestResponseBuilderMock->expects($this->never())
+            ->method('createCompanyBusinessUnitIdentifierMissingErrorResponse');
+
+        $this->restRequestMock->expects($this->atLeastOnce())
+            ->method('getRestUser')
+            ->willReturn($this->restUserTransferMock);
+
+        $this->restUserTransferMock->expects($this->atLeastOnce())
+            ->method('getSurrogateIdentifier')
+            ->willReturn($this->idCustomer);
+
+        $self = $this;
+        $this->clientMock->expects($this->atLeastOnce())
+            ->method('findOrders')
+            ->with(
+                $this->callback(
+                    static function (RestCompanyBusinessUnitOrderListTransfer $restCompanyBusinessUnitOrderListTransfer) use ($self) {
+                        return $restCompanyBusinessUnitOrderListTransfer->getIdCustomer() === $self->idCustomer
+                            && $restCompanyBusinessUnitOrderListTransfer->getCompanyBusinessUnitUuid() === $self->companyBusinessUnitUuid
+                            && $restCompanyBusinessUnitOrderListTransfer->getOrderReference() === $self->orderReference
+                            && $restCompanyBusinessUnitOrderListTransfer->getFilter() === null;
+                    }
+                )
+            )->willReturn($this->companyBusinessUnitOrderListTransferMock);
+
+        $this->companyBusinessUnitOrderListTransferMock->expects($this->atLeastOnce())
+            ->method('getOrders')
+            ->willReturn(new ArrayObject());
+
+        $this->orderRestResponseBuilderMock->expects($this->atLeastOnce())
+            ->method('createOrderNotFoundErrorResponse')
+            ->willReturn($this->restResponseMock);
+
+        $this->assertEquals($this->restResponseMock, $this->orderReader->getOrder(
+            $this->orderReference,
+            $this->restRequestMock
+        ));
     }
 }

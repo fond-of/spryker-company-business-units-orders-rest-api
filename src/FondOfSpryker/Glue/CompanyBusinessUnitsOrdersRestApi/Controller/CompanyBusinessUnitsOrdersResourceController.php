@@ -16,7 +16,7 @@ class CompanyBusinessUnitsOrdersResourceController extends AbstractController
      *     "getResourceById": {
      *          "path": "/company-business-units/{companyBusinessUnitId}/company-business-unit-orders/{companyBusinessUnitOrderId}",
      *          "summary": [
-     *              "Retrieves order by id."
+     *              "Retrieves order by identifier."
      *          ],
      *          "parameters": [{
      *              "ref": "acceptLanguage"
@@ -48,7 +48,14 @@ class CompanyBusinessUnitsOrdersResourceController extends AbstractController
      */
     public function getAction(RestRequestInterface $restRequest): RestResponseInterface
     {
+        $orderReference = $restRequest->getResource()->getId();
+
+        if ($orderReference === null) {
+            return $this->getFactory()->createOrderReader()
+                ->findOrders($restRequest);
+        }
+
         return $this->getFactory()->createOrderReader()
-            ->findOrders($restRequest);
+            ->getOrder($orderReference, $restRequest);
     }
 }
