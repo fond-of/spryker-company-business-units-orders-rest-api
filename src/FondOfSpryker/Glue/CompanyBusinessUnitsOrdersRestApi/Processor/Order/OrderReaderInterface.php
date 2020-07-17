@@ -16,7 +16,7 @@ interface OrderReaderInterface
 
     /**
      * @param string $orderReference
-     * @param \Spryker\Glue\GlueApplication\Rest\Request\Data\RestRequestInterface|string $restRequest
+     * @param \Spryker\Glue\GlueApplication\Rest\Request\Data\RestRequestInterface $restRequest
      *
      * @return \Spryker\Glue\GlueApplication\Rest\JsonApi\RestResponseInterface
      */

@@ -2,7 +2,6 @@
 
 namespace FondOfSpryker\Zed\CompanyBusinessUnitsOrdersRestApi\Business\Model;
 
-use Generated\Shared\Transfer\CompanyBusinessUnitOrderListRequestTransfer;
 use Generated\Shared\Transfer\CompanyBusinessUnitTransfer;
 use Generated\Shared\Transfer\RestCompanyBusinessUnitOrderListTransfer;
 

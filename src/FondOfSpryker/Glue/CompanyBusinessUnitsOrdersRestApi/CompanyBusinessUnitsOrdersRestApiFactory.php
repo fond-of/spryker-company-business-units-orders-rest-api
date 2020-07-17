@@ -28,6 +28,9 @@ class CompanyBusinessUnitsOrdersRestApiFactory extends AbstractFactory
         );
     }
 
+    /**
+     * @return \FondOfSpryker\Glue\CompanyBusinessUnitsOrdersRestApi\Processor\RestResponseBuilder\OrderRestResponseBuilderInterface
+     */
     protected function createOrderRestResponseBuilder(): OrderRestResponseBuilderInterface
     {
         return new OrderRestResponseBuilder(

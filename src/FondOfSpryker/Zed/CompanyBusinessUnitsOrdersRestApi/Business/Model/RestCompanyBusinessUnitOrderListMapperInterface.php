@@ -10,7 +10,7 @@ interface RestCompanyBusinessUnitOrderListMapperInterface
     /**
      * @param \Generated\Shared\Transfer\RestCompanyBusinessUnitOrderListTransfer $restCompanyBusinessUnitOrderListTransfer
      *
-     * @return \Generated\Shared\Transfer\CompanyBusinessUnitOrderListTransfer
+     * @return \Generated\Shared\Transfer\CompanyBusinessUnitOrderListRequestTransfer
      */
     public function mapToCompanyBusinessUnitOrderListRequestTransfer(
         RestCompanyBusinessUnitOrderListTransfer $restCompanyBusinessUnitOrderListTransfer
